@@ -69,6 +69,8 @@ class BaseSpider(Spider):
         next_page = response.urljoin(next_page.get())
         parsed_uri = urlparse(next_page)
         domain = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
+        
+        IGNORED_EXTENSIONS = self.IGNORED_EXTENSIONS if not 'IGNORED_EXTENSIONS' in options else options['IGNORED_EXTENSIONS']
 
         if not next_page.lower().endswith(tuple(IGNORED_EXTENSIONS)): 
             if re.search("("+")|(".join(self.POLICY_PAGES)+")", next_page.lower()):
