@@ -6,9 +6,9 @@ from mysql.connector import Error
 from os.path import exists
 
 output = "CMD_ALL_SITE_OUTPUT.csv"
-#Check output exist
+#Check output exists
 if exists(output) :
-    print("Output exist. deleted")
+    print("Output exists. deleted")
     os.remove(output)
 
 #Start scrapy crawl
@@ -16,7 +16,7 @@ print("Start: BOT")
 subprocess.call(["scrapy", "crawl", "allsite", "-O", output])
 print("End: BOT")
 
-#Check output exist to mysql
+#Check output exists to mysql
 if exists(output) :
     print("Start: Import to database")
     empdata = pd.read_csv(output, index_col=False, delimiter = ',')
