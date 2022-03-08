@@ -23,9 +23,24 @@ class BaseSpider(Spider):
     ALLOW_PROTOCALS = [
         'http://', 'https://',
     ]
+# 1. `response.url.lower().endswith(tuple(self.IGNORED_EXTENSIONS)):`
+#         - check if the url ends with any of the IGNORED_EXTENSIONS
+#     2. `for item in response.css('label, input[type=text], input[type=hidden], textarea,
+# select>option'):`
+#         - loop through all the items in the response
+#     3. `exists = self.checkPageDuplicate(item, response)`
+#         - check if the item exists in the UNIQUE_DATA
+#     4. `item = self.createRow(item, response)`
+#         - create a row for the item
+#     5. `if exists and (exists not in self.UNIQUE_DATA):`
+#         - if the item exists and it's not in the UNIQUE_DATA
+#     6. `self.UNIQUE_DATA.add(exists)`
+#         - add the item to the UNIQUE_DATA
+#     7. `yield item`
+#         -
 
     DENY_PATH = [
-        '\/ปฎิทิน\/', 'calendar', 'wp-content', '\?ical', 'events', '\?download', 'files', '\?jet_download', '\?month'
+        '\/ปฎิทิน\/', 'calendar', 'wp-content', '\?ical', 'events', '\?download', 'files', '\?jet_download', '\?month', 'attachments'
     ]
 
     POLICY_PAGES = [
@@ -37,18 +52,18 @@ class BaseSpider(Spider):
 
     IGNORED_EXTENSIONS = [
         # images
-        '\.mng', '\.pct', '\.bmp', '\.gif', '\.jpg', '\.jpeg', '\.png', '\.pst', '\.psp', '\.tif',
-        '\.tiff', '\.ai', '\.drw', '\.dxf', '\.eps', '\.ps', '\.svg',
+        'mng', 'pct', 'bmp', 'gif', 'jpg', 'jpeg', 'png', 'pst', 'psp', 'tif',
+        'tiff', 'ai', 'drw', 'dxf', 'eps', 'ps', 'svg',
 
         # audio
-        '\.mp3', '\.wma', '\.ogg', '\.wav', '\.ra', '\.aac', '\.mid', '\.au', '\.aiff',
+        'mp3', 'wma', 'ogg', 'wav', 'ra', 'aac', 'mid', 'au', 'aiff',
 
         # video
-        '\.3gp', '\.asf', '\.asx', '\.avi', '\.mov', '\.mp4', '\.mpg', '\.qt', '\.rm', '\.swf', '\.wmv',
-        '\.m4a',
+        '3gp', 'asf', 'asx', 'avi', 'mov', 'mp4', 'mpg', 'qt', 'rm', 'swf', 'wmv',
+        'm4a',
 
         # other
-        '\.css', '\.pdf', '\.doc', '\.exe', '\.bin', '\.rss', '\.zip', '\.rar', '\.msi', '\.docx', '\.pptx', '\.ppt', '\.xlsx', '\.xls', '\.iso'
+        'css', 'pdf', 'doc', 'exe', 'bin', 'rss', 'zip', 'rar', 'msi', 'docx', 'pptx', 'ppt', 'xlsx', 'xls', 'iso'
     ]
 
     def checkPageDuplicate(self, page, response, options=[]):
@@ -105,24 +120,25 @@ class BaseSpider(Spider):
                     'dataset_date': self.DATASET_DATE.strftime('%Y-%m-%d %H:%M:%S')
                 }
 
-    def validateRule(self, next_page ,response, options=[]):
-        exists = next_page.get()
-        next_page = response.urljoin(exists)
-
+    # def validateRule(self, next_page ,response, options=[]):
+    #     exists = next_page.get()
+    #     next_page = response.urljoin(exists)
+    def validateRule(self, response, options=[]):
+        current_page = response
         ALLOW_PROTOCALS = self.ALLOW_PROTOCALS if not 'ALLOW_PROTOCALS' in options else options['ALLOW_PROTOCALS']
         DENY_PATH = self.DENY_PATH if not 'DENY_PATH' in options else options['DENY_PATH']
         IGNORED_EXTENSIONS = self.IGNORED_EXTENSIONS if not 'IGNORED_EXTENSIONS' in options else options['IGNORED_EXTENSIONS']
 
-        if next_page.lower().startswith(tuple(ALLOW_PROTOCALS)): 
-            if not next_page.lower().endswith(tuple(IGNORED_EXTENSIONS)): 
-                if not re.search("("+")|(".join(DENY_PATH)+")", next_page.lower()):
+        if current_page.startswith(tuple(ALLOW_PROTOCALS)): 
+            if not current_page.endswith(tuple(IGNORED_EXTENSIONS)): 
+                if not re.search("("+")|(".join(DENY_PATH)+")", current_page):
                     return True
                 else:
-                    logging.warning('\033[93mDENY PATH on %s\033[0m', next_page.lower())
+                    logging.warning('\033[93mDENY PATH on %s\033[0m', current_page)
                     return False
             else:
-                logging.warning('\033[93mDENY EXTENSION on %s\033[0m', next_page.lower())
+                logging.warning('\033[93mDENY EXTENSION on %s\033[0m', current_page)
                 return False
         else:
-            logging.warning('\033[93mDENY PROTOCAL on %s\033[0m', next_page.lower())
+            logging.warning('\033[93mDENY PROTOCAL on %s\033[0m', current_page)
             return False

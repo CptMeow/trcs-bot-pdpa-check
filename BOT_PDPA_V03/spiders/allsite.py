@@ -1,4 +1,5 @@
 import datetime
+from pydoc import pager
 import re
 import scrapy
 from urllib.parse import urlparse
@@ -93,20 +94,25 @@ class AllSite(BaseSpider):
     #     Rule(LinkExtractor(allow_domains=('redcross\.or\.th','somdej\.or\.th' ),deny=('.+\.com', ))),
     # )
 
+    # check only response 200
+    # handle_httpstatus_list = [200]
 
     def parse(self, response):
 
-        for item in response.css('label, input[type=text], input[type=hidden], textarea, select>option'):
-            exists = self.checkPageDuplicate(item, response)
-            item = self.createRow(item, response)
-            if exists and (exists not in self.UNIQUE_DATA):
-                self.UNIQUE_DATA.add(exists)
-                yield item
+        # Validate current url
+        if self.validateRule(response.url.lower()):
+            for item in response.css('label, input[type=text], input[type=hidden], textarea, select, select>option'):
+                exists = self.checkPageDuplicate(item, response)
+                item = self.createRow(item, response)
+                if exists and (exists not in self.UNIQUE_DATA):
+                    self.UNIQUE_DATA.add(exists)
+                    yield item
 
-        for next_page in response.css('a::attr(href)'):
-            next_page_check = response.urljoin(next_page.get())
-            if next_page_check and (next_page_check not in self.UNIQUE_URL):
-                self.UNIQUE_URL.add(next_page_check)
-                if self.validateRule(next_page,response):
-                    yield self.checkPDPA(next_page,response)
-                    yield response.follow(next_page, callback=self.parse)
+            for next_page in response.css('a::attr(href)'):
+                next_page_check = response.urljoin(next_page.get())
+                if next_page_check and (next_page_check not in self.UNIQUE_URL):
+                    self.UNIQUE_URL.add(next_page_check)
+                    # Validate next page
+                    if self.validateRule(next_page_check):
+                        yield self.checkPDPA(next_page,response)
+                        yield response.follow(next_page, callback=self.parse)
