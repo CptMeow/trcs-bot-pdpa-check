@@ -40,7 +40,24 @@ class BaseSpider(Spider):
 #         -
 
     DENY_PATH = [
-        '\/ปฎิทิน\/', 'calendar', 'wp-content', '\?ical', 'events', '\?download', 'files', '\?jet_download', '\?month', 'attachments'
+        '\/ปฎิทิน\/', 
+        'calendar', 
+        'wp-content', 
+        '\?ical', 
+        'events', 
+        '\?download', 
+        'files', 
+        '\?jet_download', 
+        '\?month', 
+        'attachments', 
+        '\&uid', 
+        'download',
+        '\?c\=annual_report'
+    ]
+
+    DENY_DOMAIN = [
+        'clipping.redcross.or.th',
+        'room.redcross.or.th'
     ]
 
     POLICY_PAGES = [
@@ -97,10 +114,19 @@ class BaseSpider(Spider):
                     'name': '',
                     'text': 'PDPA_PASS',
                     'url': next_page.lower(),
-                    'dataset_date': self.DATASET_DATE.strftime('%Y-%m-%d %H:%M:%S')
+                    'dataset_date': self.DATASET_DATE.strftime('%Y-%m-%d %H:%M:%S'),
+                    'selector_type': ''
                 }
 
-    def createRow(self, item, response, options=[]):
+    def selector(self, selector, response):
+        for item in response.css(selector):
+                exists = self.checkPageDuplicate(item, response)
+                item = self.createRow(item, response, selector)
+                if exists and (exists not in self.UNIQUE_DATA):
+                    self.UNIQUE_DATA.add(exists)
+                    return item
+
+    def createRow(self, item, response, selector, options=[]):
         next_page = response.urljoin(item.get())
         parsed_uri = urlparse(next_page)
         domain = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
@@ -117,7 +143,8 @@ class BaseSpider(Spider):
                     'name': item.css('::attr(name)').get(),
                     'text': str(item.css('::text, ::attr(placeholder)').get()).replace("\r\n", "").replace("\n", "").replace("\r", "").replace("\t", "").replace(" ", ""),
                     'url': response.url,
-                    'dataset_date': self.DATASET_DATE.strftime('%Y-%m-%d %H:%M:%S')
+                    'dataset_date': self.DATASET_DATE.strftime('%Y-%m-%d %H:%M:%S'),
+                    'selector_type': selector
                 }
 
     # def validateRule(self, next_page ,response, options=[]):
@@ -126,19 +153,24 @@ class BaseSpider(Spider):
     def validateRule(self, response, options=[]):
         current_page = response
         ALLOW_PROTOCALS = self.ALLOW_PROTOCALS if not 'ALLOW_PROTOCALS' in options else options['ALLOW_PROTOCALS']
+        DENY_DOMAIN = self.DENY_DOMAIN if not 'DENY_DOMAIN' in options else options['DENY_DOMAIN']
         DENY_PATH = self.DENY_PATH if not 'DENY_PATH' in options else options['DENY_PATH']
         IGNORED_EXTENSIONS = self.IGNORED_EXTENSIONS if not 'IGNORED_EXTENSIONS' in options else options['IGNORED_EXTENSIONS']
 
-        if current_page.startswith(tuple(ALLOW_PROTOCALS)): 
-            if not current_page.endswith(tuple(IGNORED_EXTENSIONS)): 
-                if not re.search("("+")|(".join(DENY_PATH)+")", current_page):
-                    return True
+        if not re.search("("+")|(".join(DENY_DOMAIN)+")", current_page): 
+            if current_page.startswith(tuple(ALLOW_PROTOCALS)): 
+                if not current_page.endswith(tuple(IGNORED_EXTENSIONS)): 
+                    if not re.search("("+")|(".join(DENY_PATH)+")", current_page):
+                        return True
+                    else:
+                        logging.warning('\033[93mDENY PATH on %s\033[0m', current_page)
+                        return False
                 else:
-                    logging.warning('\033[93mDENY PATH on %s\033[0m', current_page)
+                    logging.warning('\033[93mDENY EXTENSION on %s\033[0m', current_page)
                     return False
             else:
-                logging.warning('\033[93mDENY EXTENSION on %s\033[0m', current_page)
+                logging.warning('\033[93mDENY PROTOCAL on %s\033[0m', current_page)
                 return False
         else:
-            logging.warning('\033[93mDENY PROTOCAL on %s\033[0m', current_page)
+            logging.warning('\033[93mDENY DOMAIN on %s\033[0m', current_page)
             return False
