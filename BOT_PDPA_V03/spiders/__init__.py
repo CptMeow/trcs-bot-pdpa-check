@@ -57,7 +57,10 @@ class BaseSpider(Spider):
 
     DENY_DOMAIN = [
         'clipping.redcross.or.th',
-        'room.redcross.or.th'
+        'eservice.redcross.or.th',
+        'fmis.redcross.or.th',
+        'fmislog.redcross.or.th',
+        'room.redcross.or.th',
     ]
 
     POLICY_PAGES = [
